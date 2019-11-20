@@ -138,21 +138,21 @@ public final class LoggerFactory {
     private final static void performInitialization() {
         bind();
         if (INITIALIZATION_STATE == SUCCESSFUL_INITIALIZATION) {
-            versionSanityCheck();
+            versionSanityCheck();               // 这里进行版本兼容性检查 ，看看Slf4j和当前日志框架的适配性如何
         }
     }
 
     private final static void bind() {
         try {
-            List<SLF4JServiceProvider> providersList = findServiceProviders();
-            reportMultipleBindingAmbiguity(providersList);
+            List<SLF4JServiceProvider> providersList = findServiceProviders();      // 这一步很关键，调用了java.util.ServiceLoader去配置加载我们需要的 provider，这个provider的类型将决定我们是通过logback还是log4j日志系统打印日志的关键
+            reportMultipleBindingAmbiguity(providersList);  // 如果有多个provider的配置，就打印一条日志报告一下
             if (providersList != null && !providersList.isEmpty()) {
             	PROVIDER = providersList.get(0);
             	// SLF4JServiceProvider.initialize() is intended to be called here and nowhere else.
-            	PROVIDER.initialize();
+            	PROVIDER.initialize();   /** 如何初始化取决于返回的哪一个provider（基本上就决定了日志打印格式）：logback返回：{@link  ch.qos.logback.classic.spi.LogbackServiceProvider}*/
             	INITIALIZATION_STATE = SUCCESSFUL_INITIALIZATION;
-                reportActualBinding(providersList);
-                fixSubstituteLoggers();
+                reportActualBinding(providersList);  // 如果有多个provider的配置，报告一下真正初始化的是哪一个provider(永远是数组的第一个，取决于jvm对文件的加载)
+                fixSubstituteLoggers();     // 这两步是干啥的?
                 replayEvents();
                 // release all resources in SUBST_FACTORY
                 SUBST_PROVIDER.getSubstituteLoggerFactory().clear();
@@ -162,13 +162,13 @@ public final class LoggerFactory {
                 Util.report("Defaulting to no-operation (NOP) logger implementation");
                 Util.report("See " + NO_PROVIDERS_URL + " for further details.");
 
-                Set<URL> staticLoggerBinderPathSet = findPossibleStaticLoggerBinderPathSet();
+                Set<URL> staticLoggerBinderPathSet = findPossibleStaticLoggerBinderPathSet();  // 算是报告错误吧
                 reportIgnoredStaticLoggerBinders(staticLoggerBinderPathSet);
             }
         } catch (Exception e) {
             failedBinding(e);
             throw new IllegalStateException("Unexpected initialization failure", e);
-        }
+}
     }
 
     private static void reportIgnoredStaticLoggerBinders(Set<URL> staticLoggerBinderPathSet) {
@@ -401,7 +401,7 @@ public final class LoggerFactory {
      * @return the ILoggerFactory instance in use
      */
     public static ILoggerFactory getILoggerFactory() {
-        return getProvider().getLoggerFactory();
+        return getProvider().getLoggerFactory();      // 由具体的日志框架决定factory
     }
 
     /**
@@ -411,17 +411,17 @@ public final class LoggerFactory {
      * @since 1.8.0
      */
     static SLF4JServiceProvider getProvider() {
-        if (INITIALIZATION_STATE == UNINITIALIZED) {
-            synchronized (LoggerFactory.class) {
+        if (INITIALIZATION_STATE == UNINITIALIZED) {            // INITIALIZATION_STATE 状态决定是否创建新的 provider
+            synchronized (LoggerFactory.class) {                // 同步锁，说明 provider 只能被创建一次（单例模式）
                 if (INITIALIZATION_STATE == UNINITIALIZED) {
                     INITIALIZATION_STATE = ONGOING_INITIALIZATION;
-                    performInitialization();
+                    performInitialization();                    // 第一次的时候，去初始创建 provider
                 }
             }
         }
         switch (INITIALIZATION_STATE) {
         case SUCCESSFUL_INITIALIZATION:
-            return PROVIDER;
+            return PROVIDER;                // 返回成功的provider ， 根据日志框架来确定
         case NOP_FALLBACK_INITIALIZATION:
             return NOP_FALLBACK_FACTORY;
         case FAILED_INITIALIZATION:
