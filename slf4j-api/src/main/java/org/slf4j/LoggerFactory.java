@@ -99,9 +99,9 @@ public final class LoggerFactory {
     static volatile SLF4JServiceProvider PROVIDER;
 
     private static List<SLF4JServiceProvider> findServiceProviders() {
-        ServiceLoader<SLF4JServiceProvider> serviceLoader = ServiceLoader.load(SLF4JServiceProvider.class);
+        ServiceLoader<SLF4JServiceProvider> serviceLoader = ServiceLoader.load(SLF4JServiceProvider.class);  // 去初始化一个serviceLoader
         List<SLF4JServiceProvider> providerList = new ArrayList<SLF4JServiceProvider>();
-        for (SLF4JServiceProvider provider : serviceLoader) {
+        for (SLF4JServiceProvider provider : serviceLoader) {           // serviceLoader懒加载的迭代器，第一次循环才会去读取配置
             providerList.add(provider);
         }
         return providerList;
